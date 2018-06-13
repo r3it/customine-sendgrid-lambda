@@ -46,9 +46,12 @@ $ aws cloudformation describe-stack-events \
 
 Please setup environment variables on your Lambda function.
 
-| SENDGRID_API_KEY | your API Key |
+|  Key  |  Value  |
+| ---- | ---- |
+| SENDGRID\_API_KEY | your API Key |
 | SENDER_NAME | sender name |
 | SENDER_ADDRESS | sender email address |
+| TEMPLATE_ID | SendGrid templateId |
 
 ## Usage
 
@@ -59,7 +62,9 @@ Request parameters:
     "subject": "mail subject",
     "to_name": "recipient name",
     "to_address": "recipient email",
-    "body_text": "text mail body"
+    "your_template_key1": "value1",
+    "your_template_key2": "value2",
+    "your_template_key3": "value3"
 }
 ```
 
