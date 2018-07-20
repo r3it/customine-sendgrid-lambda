@@ -8,6 +8,11 @@ Resources:
       Runtime: go1.x
       CodeUri: build
       Timeout: 30
+      Environment:
+        Variables:
+          SENDGRID_API_KEY: your API Key
+          SENDER_NAME: sender name
+          SENDER_ADDRESS: sender email address
   IdentityPool:
     Type: "AWS::Cognito::IdentityPool"
     Properties:

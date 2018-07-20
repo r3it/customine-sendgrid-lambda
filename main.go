@@ -13,13 +13,6 @@ import (
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
-type Event struct {
-	Subject   string `json:"subject" valid:"required"`
-	ToName    string `json:"to_name" valid:"required"`
-	ToAddress string `json:"to_address" valid:"required"`
-	BodyText  string `json:"body_text" valid:"required"`
-}
-
 type Response struct {
 	StatusCode int    `json:"status_code"`
 	Message    string `json:"message"`
@@ -28,11 +21,11 @@ type Response struct {
 func sendMail(ctx context.Context, event json.RawMessage) (Response, error) {
 	j, err := json.Marshal(&event)
 	if err != nil {
-		return Response{StatusCode: 500}, errors.New(err.Error())
+		return errResponse(err)
 	}
 	v, err := jason.NewObjectFromBytes(j)
 	if err != nil {
-		return Response{StatusCode: 500}, errors.New(err.Error())
+		return errResponse(err)
 	}
 
 	m := mail.NewV3Mail()
@@ -40,26 +33,35 @@ func sendMail(ctx context.Context, event json.RawMessage) (Response, error) {
 	if s, err := v.GetString("subject"); err == nil {
 		m.Subject = s
 	} else {
-		return Response{StatusCode: 500}, errors.New(err.Error())
+		return errResponse(err)
 	}
 	m.SetFrom(from)
-	m.SetTemplateID(os.Getenv("TEMPLATE_ID"))
+
+	templateID, err := v.GetString("template_id")
+	if err != nil {
+		return errResponse(err)
+	}
+	m.SetTemplateID(templateID)
 
 	p := mail.NewPersonalization()
 	toName, err := v.GetString("to_name")
 	if err != nil {
-		return Response{StatusCode: 500}, errors.New(err.Error())
+		return errResponse(err)
 	}
 	toAddress, err := v.GetString("to_address")
 	if err != nil {
-		return Response{StatusCode: 500}, errors.New(err.Error())
+		return errResponse(err)
 	}
 	to := mail.NewEmail(toName, toAddress)
 	p.AddTos(to)
+	bcc := mail.NewEmail(os.Getenv("BCC_NAME"), os.Getenv("BCC_ADDRESS"))
+	if bcc.Name != "" && bcc.Address != "" {
+		p.AddBCCs(bcc)
+	}
 
 	root, err := v.GetObject()
 	if err != nil {
-		return Response{StatusCode: 500}, errors.New(err.Error())
+		return errResponse(err)
 	}
 
 	for key, value := range root.Map() {
@@ -69,18 +71,21 @@ func sendMail(ctx context.Context, event json.RawMessage) (Response, error) {
 	}
 	m.AddPersonalizations(p)
 
-	// p.SetCustomArg
 	request := sendgrid.GetRequest(os.Getenv("SENDGRID_API_KEY"), "/v3/mail/send", "https://api.sendgrid.com")
 	request.Method = "POST"
 	request.Body = mail.GetRequestBody(m)
 	response, err := sendgrid.API(request)
 	if err != nil {
-		return Response{StatusCode: 500}, errors.New(err.Error())
+		return errResponse(err)
 	}
 	return Response{
 		StatusCode: response.StatusCode,
 		Message:    response.Body,
 	}, nil
+}
+
+func errResponse(err error) (Response, error) {
+	return Response{StatusCode: 500}, errors.New(err.Error())
 }
 
 func main() {
